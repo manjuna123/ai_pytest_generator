@@ -1,0 +1,6 @@
+anthropic
+pytest
+requests
+pyyaml
+robotframework
+pytest-json-report
