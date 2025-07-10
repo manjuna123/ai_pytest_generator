@@ -1,0 +1,117 @@
+[INFO] Reading OpenAPI spec from api_spec.yaml
+[INFO] Prompt for LLM built.
+[INFO] Sending prompt to Anthropic LLM...
+[INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+[INFO] Received test code from LLM.
+[INFO] ===== LLM Response (Python test code) =====
+[INFO] Test code saved to /tmp/tmpo_ibuzpw_generated_test.py
+[INFO] Running tests in /tmp/tmpo_ibuzpw_generated_test.py
+[INFO] Test execution completed.
+[INFO] ===== Test Execution Results =====
+[INFO] ===== Test Report =====
+===== LLM Response (Python test code) =====
+Here's a Python pytest file that tests the endpoints defined in the provided OpenAPI spec using the requests library:
+
+```python
+import pytest
+import requests
+
+BASE_URL = "https://jsonplaceholder.typicode.com"
+
+def test_get_users():
+    response = requests.get(f"{BASE_URL}/users")
+    assert response.status_code == 200
+    
+    users = response.json()
+    assert isinstance(users, list)
+    
+    for user in users:
+        assert isinstance(user, dict)
+        assert "id" in user
+        assert isinstance(user["id"], int)
+        assert "name" in user
+        assert isinstance(user["name"], str)
+
+def test_create_user():
+    new_user = {
+        "name": "John Doe",
+        "email": "johndoe@example.com",
+        "username": "johndoe"
+    }
+    
+    response = requests.post(f"{BASE_URL}/users", json=new_user)
+    assert response.status_code == 201
+    
+    created_user = response.json()
+    assert isinstance(created_user, dict)
+    assert "id" in created_user
+    assert isinstance(created_user["id"], int)
+    assert "name" in created_user
+    assert created_user["name"] == new_user["name"]
+    assert "email" in created_user
+    assert created_user["email"] == new_user["email"]
+    assert "username" in created_user
+    assert created_user["username"] == new_user["username"]
+```
+
+This file contains two test functions:
+
+1. `test_get_users()`:
+   - Sends a GET request to the `/users` endpoint.
+   - Asserts that the response status code is 200 (OK).
+   - Asserts that the response body is a list of user objects.
+   - Iterates over each user object and asserts that it has the expected properties (`id` and `name`) with the correct types.
+
+2. `test_create_user()`:
+   - Creates a new user object with sample data.
+   - Sends a POST request to the `/users` endpoint with the new user data as JSON.
+   - Asserts that the response status code is 201 (Created).
+   - Asserts that the response body is a user object with the expected properties (`id`, `name`, `email`, `username`).
+   - Asserts that the created user object has the same data as the input user object.
+
+To run these tests, make sure you have pytest installed (`pip install pytest`) and save the code in a file with a name like `test_api.py`. Then, you can run the tests using the command `pytest test_api.py`.
+
+Note: The provided OpenAPI spec is a simplified version and may not represent the actual API. Make sure to update the tests according to the actual API specification and requirements.
+
+===== Test Execution Results =====
+
+Total Tests Found: 2
+------------------------------------------------------------
+✅ PASSED: Get Users
+   Test: ../../tmp/tmpo_ibuzpw_generated_test.py::test_get_users
+
+✅ PASSED: Create User
+   Test: ../../tmp/tmpo_ibuzpw_generated_test.py::test_create_user
+
+------------------------------------------------------------
+📊 Test Summary:
+   ✅ Passed: 2
+   ❌ Failed: 0
+   ⚠️ Skipped: 0
+   🔴 Errors: 0
+   📋 Total: 2
+
+===== Detailed Test Report =====
+Scenarios from JSON report:
+  ✅ tmpo_ibuzpw_generated_test.py::test_get_users: passed (0.00s)
+  ✅ tmpo_ibuzpw_generated_test.py::test_create_user: passed (0.00s)
+
+Overall Exit Code: 0
+Overall Status: 0
+
+===== Raw pytest Output =====
+============================= test session starts ==============================
+platform linux -- Python 3.12.1, pytest-8.4.0, pluggy-1.6.0 -- /home/codespace/.python/current/bin/python3
+cachedir: .pytest_cache
+metadata: {'Python': '3.12.1', 'Platform': 'Linux-6.8.0-1027-azure-x86_64-with-glibc2.31', 'Packages': {'pytest': '8.4.0', 'pluggy': '1.6.0'}, 'Plugins': {'anyio': '4.9.0', 'metadata': '3.1.1', 'json-report': '1.5.0'}, 'JAVA_HOME': '/usr/local/sdkman/candidates/java/current'}
+rootdir: /tmp
+plugins: anyio-4.9.0, metadata-3.1.1, json-report-1.5.0
+collecting ... collected 2 items
+
+../../tmp/tmpo_ibuzpw_generated_test.py::test_get_users PASSED           [ 50%]
+../../tmp/tmpo_ibuzpw_generated_test.py::test_create_user PASSED         [100%]
+
+--------------------------------- JSON report ----------------------------------
+report saved to: .report.json
+============================== 2 passed in 0.80s ===============================
+

@@ -22,12 +22,94 @@ def read_openapi_spec(spec_path):
 
 # 2. Build prompt for LLM
 def build_prompt(openapi_spec, base_url=None):
-    base_url_instruction = f"The base URL for all requests is: {base_url}\n" if base_url else ""
+    base_url_instruction = f"Use this base URL: {base_url}" if base_url else "Define BASE_URL variable"
     prompt = f"""
-Given the following OpenAPI spec, generate Python pytest test cases using the requests library to test all endpoints. The tests should be runnable as a single file.
-{base_url_instruction}
-OpenAPI Spec:
+You are an expert Robot Framework test automation engineer. Generate comprehensive Robot Framework test cases based on the following OpenAPI specification.
+
+Requirements:
+1. Create Robot Framework .robot file syntax with proper sections
+2. Use RequestsLibrary for HTTP requests 
+3. Include *** Settings ***, *** Variables ***, *** Test Cases ***, and *** Keywords *** sections
+4. Validate response status codes and response data structure
+5. Use descriptive test case names and documentation
+6. Include proper error handling and assertions
+7. Use Robot Framework best practices and conventions
+8. Add extensive logging for better visibility and debugging
+9. {base_url_instruction}
+
+OpenAPI Specification:
 {openapi_spec}
+
+Generate a complete Robot Framework test file that:
+- Tests all available endpoints from the OpenAPI spec
+- Validates HTTP response codes (200, 201, 404, etc.)
+- Checks response data structure and required fields
+- Uses proper Robot Framework syntax
+- Includes setup and teardown with detailed logging
+- Uses variables for reusable data
+- Has clear test documentation
+- Includes detailed logging statements for each step
+- Logs request and response details
+- Uses Log To Console for important information
+
+Example structure with enhanced logging:
+*** Settings ***
+Library    RequestsLibrary
+Library    Collections
+Library    BuiltIn
+Suite Setup    Test Suite Setup
+Suite Teardown    Test Suite Teardown
+
+*** Variables ***
+${{BASE_URL}}    {base_url if base_url else 'https://your-api-url.com'}
+
+*** Test Cases ***
+Test Endpoint Name
+    [Documentation]    Description of what this test does
+    [Tags]    api    smoke
+    [Setup]    Log Test Start    Test Endpoint Name
+    [Teardown]    Log Test End    Test Endpoint Name
+    
+    Log    🚀 Starting endpoint test for /endpoint
+    Log To Console    🚀 Testing endpoint: /endpoint
+    
+    # Make request with logging
+    Log    📤 Sending request to: ${{BASE_URL}}/endpoint
+    ${{response}}=    GET    ${{BASE_URL}}/endpoint
+    Log    📥 Response status: ${{response.status_code}}
+    Log    📄 Response body: ${{response.text}}
+    Log To Console    📊 Status: ${{response.status_code}}
+    
+    # Validate response
+    Status Should Be    200
+    Log    ✅ Status code validation passed
+    Log To Console    ✅ Test completed successfully
+
+*** Keywords ***
+Test Suite Setup
+    Log    📋 Setting up AI Generated API Test Suite
+    Log To Console    📋 AI Generated API Tests - Starting Test Suite
+    Create Session    api    ${{BASE_URL}}    verify=False
+    Log    🌐 Base URL configured: ${{BASE_URL}}
+    Log To Console    🌐 Base URL: ${{BASE_URL}}
+
+Test Suite Teardown
+    Log    🏁 Tearing down AI Generated API Test Suite
+    Log To Console    🏁 AI Generated API Tests - Test Suite Completed
+    Delete All Sessions
+    Log    🧹 All sessions cleaned up
+
+Log Test Start
+    [Arguments]    ${{test_name}}
+    Log    🧪 Starting test case: ${{test_name}}
+    Log To Console    🧪 Starting: ${{test_name}}
+
+Log Test End
+    [Arguments]    ${{test_name}}
+    Log    ✅ Completed test case: ${{test_name}}
+    Log To Console    ✅ Completed: ${{test_name}}
+
+Please generate the complete .robot file content with extensive logging and proper error handling.
 """
     logging.info("Prompt for LLM built.")
     return prompt
@@ -40,17 +122,53 @@ def generate_tests_with_llm(prompt):
         model="claude-3-opus-20240229",  # Update to your preferred model
         max_tokens=4096,
         temperature=0.2,
-        system="You are a helpful assistant that writes Python pytest code.",
+        system="You are a helpful assistant that writes Robot Framework test code using proper .robot file syntax.",
         messages=[{"role": "user", "content": prompt}]
     )
     code = message.content[0].text if hasattr(message.content[0], 'text') else message.content[0]['text']
-    logging.info("Received test code from LLM.")
+    logging.info("Received Robot Framework test code from LLM.")
     return code
 
 def extract_python_code(llm_response):
+    # Look for Robot Framework code blocks first
+    robot_patterns = [
+        r"```robot\s*([\s\S]+?)```",
+        r"```robotframework\s*([\s\S]+?)```",
+    ]
+    
+    for pattern in robot_patterns:
+        match = re.search(pattern, llm_response)
+        if match:
+            return match.group(1).strip()
+    
+    # Look for Robot Framework content by finding *** Settings *** section
+    if "*** Settings ***" in llm_response:
+        # Extract everything from *** Settings *** to the end of Robot Framework content
+        start_pos = llm_response.find("*** Settings ***")
+        
+        # Find where Robot Framework content ends (look for explanatory text)
+        end_markers = [
+            "\n\nThis Robot Framework test file includes:",
+            "\n\nThe above Robot Framework",
+            "\n\nThis test file contains:",
+            "\n\nLet me know if",
+            "\n\nThis file includes:"
+        ]
+        
+        end_pos = len(llm_response)
+        for marker in end_markers:
+            marker_pos = llm_response.find(marker, start_pos)
+            if marker_pos != -1 and marker_pos < end_pos:
+                end_pos = marker_pos
+        
+        robot_content = llm_response[start_pos:end_pos].strip()
+        return robot_content
+    
+    # Fallback to python code blocks
     match = re.search(r"```python\s*([\s\S]+?)```", llm_response)
     if match:
         return match.group(1)
+    
     return llm_response
 
 # Parse pytest output for test details
@@ -60,14 +178,14 @@ def parse_pytest_output(stdout, stderr):
     lines = stdout.split('\n')
     
     for line in lines:
-        # Look for test execution lines with status
-        if '::' in line and ('PASSED' in line or 'FAILED' in line or 'SKIPPED' in line or 'ERROR' in line):
+        # Look for Robot Framework test execution lines
+        if '::' in line and ('PASS' in line or 'FAIL' in line or 'SKIP' in line):
             parts = line.split(' ')
             if len(parts) >= 2:
                 test_name = parts[0]
                 status = None
                 for part in parts:
-                    if part in ['PASSED', 'FAILED', 'SKIPPED', 'ERROR']:
+                    if part in ['PASS', 'FAIL', 'SKIP', 'ERROR']:
                         status = part
                         break
                 
@@ -82,61 +200,146 @@ def parse_pytest_output(stdout, stderr):
                         'status': status,
                         'full_line': line.strip()
                     })
+        
+        # Also look for Robot Framework format: TestName | PASS |
+        elif ' | PASS |' in line or ' | FAIL |' in line:
+            parts = line.split(' | ')
+            if len(parts) >= 2:
+                test_name = parts[0].strip()
+                status = parts[1].strip()
+                test_results.append({
+                    'name': test_name,
+                    'description': test_name,
+                    'status': status,
+                    'full_line': line.strip()
+                })
     
     return test_results
 
 # 4. Save test code to file
 def save_test_code(test_code):
-    fd, path = tempfile.mkstemp(suffix="_generated_test.py")
-    with os.fdopen(fd, 'w') as f:
+    # Create generated_tests directory if it doesn't exist
+    os.makedirs("generated_tests", exist_ok=True)
+    
+    # Create timestamped filename
+    import datetime
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"generated_tests/ai_generated_api_tests_{timestamp}.robot"
+    
+    with open(filename, 'w') as f:
         f.write(test_code)
-    logging.info(f"Test code saved to {path}")
-    return path
+    
+    logging.info(f"Robot Framework test code saved to {filename}")
+    print(f"💾 AI-generated Robot Framework test saved to: {filename}")
+    
+    # Print the AI-generated Robot file content for verification
+    print("\n" + "="*80)
+    print("🤖 AI-GENERATED ROBOT FRAMEWORK TEST FILE CONTENT:")
+    print("="*80)
+    print(test_code)
+    print("="*80)
+    print(f"📁 File saved to: {filename}")
+    print("="*80)
+    
+    return filename
+    print(f"📁 File saved as: {filename}")
+    print("="*80 + "\n")
+    
+    return filename
 
 # 5. Run test code and collect results
 def run_tests(test_file_path):
-    logging.info(f"Running tests in {test_file_path}")
-    result = subprocess.run([
-        "python3", "-m", "pytest", test_file_path, "--tb=short", "--maxfail=100", "--disable-warnings", "--json-report", "-v"
-    ], capture_output=True, text=True)
-    logging.info("Test execution completed.")
+    logging.info(f"Running Robot Framework tests in {test_file_path}")
     
-    # Parse pytest output for individual test results
+    # Create latest_test_results directory (remove existing if present)
+    output_dir = "latest_test_results"
+    if os.path.exists(output_dir):
+        import shutil
+        shutil.rmtree(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    result = subprocess.run([
+        "robot", 
+        "--outputdir", output_dir,
+        "--output", "output.xml",
+        "--log", "log.html", 
+        "--report", "report.html",
+        "--loglevel", "INFO",
+        "--consolecolors", "on",
+        "--console", "verbose",
+        test_file_path
+    ], capture_output=True, text=True)
+    
+    logging.info("Robot Framework test execution completed.")
+    
+    # Print detailed information about generated reports
+    abs_output_dir = os.path.abspath(output_dir)
+    abs_test_file = os.path.abspath(test_file_path)
+    
+    print(f"\n🎯 ROBOT FRAMEWORK TEST EXECUTION COMPLETED")
+    print(f"📊 Test reports and logs generated in: {abs_output_dir}")
+    print(f"📄 Available files:")
+    print(f"   📋 HTML Report: {abs_output_dir}/report.html")
+    print(f"   📝 Detailed Log: {abs_output_dir}/log.html") 
+    print(f"   📊 XML Output: {abs_output_dir}/output.xml")
+    
+    print(f"\n🌐 Open in browser:")
+    print(f"   📋 Report: file://{abs_output_dir}/report.html")
+    print(f"   📝 Log: file://{abs_output_dir}/log.html")
+    
+    # Parse Robot Framework output for individual test results
     test_results = parse_pytest_output(result.stdout, result.stderr)
     
-    # Try to read pytest's JSON report
-    import json
-    json_report_path = ".report.json"
+    # Try to read Robot Framework's output.xml for detailed results
+    import xml.etree.ElementTree as ET
     scenarios = []
     status = "unknown"
-    if os.path.exists(json_report_path):
-        with open(json_report_path) as f:
-            report = json.load(f)
-            for test in report.get("tests", []):
-                test_info = {
-                    "name": test.get("nodeid"),
-                    "outcome": test.get("outcome"),
-                    "duration": test.get("duration", 0),
-                    "setup": test.get("setup", {}),
-                    "call": test.get("call", {}),
-                    "teardown": test.get("teardown", {})
-                }
-                scenarios.append(test_info)
-            status = report.get("exitcode", "unknown")
     
-    return result.stdout, result.stderr, result.returncode, scenarios, status, test_results
+    output_xml_path = os.path.join(output_dir, "output.xml")
+    if os.path.exists(output_xml_path):
+        try:
+            tree = ET.parse(output_xml_path)
+            root = tree.getroot()
+            
+            # Parse test cases from Robot Framework XML
+            for test in root.findall(".//test"):
+                test_name_xml = test.get("name", "Unknown Test")
+                status_elem = test.find("status")
+                
+                if status_elem is not None:
+                    test_status = status_elem.get("status", "UNKNOWN")
+                    start_time = status_elem.get("starttime", "")
+                    end_time = status_elem.get("endtime", "")
+                    
+                    scenarios.append({
+                        "name": test_name_xml,
+                        "outcome": test_status.lower(),
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "message": status_elem.text or ""
+                    })
+            
+            # Get overall suite status
+            suite_status = root.find(".//suite/status")
+            if suite_status is not None:
+                status = suite_status.get("status", "UNKNOWN")
+                
+        except Exception as e:
+            logging.warning(f"Could not parse Robot Framework XML output: {e}")
+    
+    return result.stdout, result.stderr, result.returncode, scenarios, status, test_results, output_dir
 
 # 6. Main function to orchestrate all steps
 def verify_all_apis(spec_path, base_url=None):
     openapi_spec = read_openapi_spec(spec_path)
     prompt = build_prompt(openapi_spec, base_url)
     test_code = generate_tests_with_llm(prompt)
-    logging.info("===== LLM Response (Python test code) =====")
-    print("===== LLM Response (Python test code) =====")
+    logging.info("===== LLM Response (Robot Framework test code) =====")
+    print("===== LLM Response (Robot Framework test code) =====")
     print(test_code)
     test_code = extract_python_code(test_code)
     test_file = save_test_code(test_code)
-    stdout, stderr, exit_code, scenarios, status, test_results = run_tests(test_file)
+    stdout, stderr, exit_code, scenarios, status, test_results, output_dir = run_tests(test_file)
     
     # Print detailed test case information
     logging.info("===== Test Execution Results =====")
@@ -153,9 +356,9 @@ def verify_all_apis(spec_path, base_url=None):
         
         for test_result in test_results:
             status_symbol = {
-                'PASSED': '✅',
-                'FAILED': '❌', 
-                'SKIPPED': '⚠️',
+                'PASS': '✅',
+                'FAIL': '❌', 
+                'SKIP': '⚠️',
                 'ERROR': '🔴'
             }.get(test_result['status'], '❓')
             
@@ -163,11 +366,11 @@ def verify_all_apis(spec_path, base_url=None):
             print(f"   Test: {test_result['name']}")
             
             # Count results
-            if test_result['status'] == 'PASSED':
+            if test_result['status'] == 'PASS':
                 passed_count += 1
-            elif test_result['status'] == 'FAILED':
+            elif test_result['status'] == 'FAIL':
                 failed_count += 1
-            elif test_result['status'] == 'SKIPPED':
+            elif test_result['status'] == 'SKIP':
                 skipped_count += 1
             elif test_result['status'] == 'ERROR':
                 error_count += 1
@@ -185,6 +388,7 @@ def verify_all_apis(spec_path, base_url=None):
     
     report = {
         "test_file": test_file,
+        "output_dir": output_dir,
         "stdout": stdout,
         "stderr": stderr,
         "exit_code": exit_code,
@@ -194,24 +398,42 @@ def verify_all_apis(spec_path, base_url=None):
     }
     
     logging.info("===== Test Report =====")
-    print("\n===== Detailed Test Report =====")
-    print("Scenarios from JSON report:")
+    print("\n===== Detailed Robot Framework Test Report =====")
+    print("Test Cases from XML report:")
     for s in scenarios:
-        duration = s.get('duration', 0)
         outcome_symbol = {
-            'passed': '✅',
-            'failed': '❌',
-            'skipped': '⚠️',
+            'pass': '✅',
+            'fail': '❌',
+            'skip': '⚠️',
             'error': '🔴'
         }.get(s.get('outcome', '').lower(), '❓')
         
-        print(f"  {outcome_symbol} {s.get('name', 'Unknown')}: {s.get('outcome', 'Unknown')} ({duration:.2f}s)")
+        print(f"  {outcome_symbol} {s.get('name', 'Unknown')}: {s.get('outcome', 'Unknown').upper()}")
+        if s.get('message'):
+            print(f"    Message: {s.get('message')}")
     
     print(f"\nOverall Exit Code: {exit_code}")
     print(f"Overall Status: {status}")
     
+    # Print access information for latest_test_results
+    print(f"\n🔍 HOW TO ACCESS LOGS AND REPORTS:")
+    print(f" Reports Directory: {os.path.abspath(output_dir)}")
+    print(f"🌐 Open in browser:")
+    print(f"   📋 Report: file://{os.path.abspath(output_dir)}/report.html")
+    print(f"   📝 Log:    file://{os.path.abspath(output_dir)}/log.html")
+    print(f"   📊 XML:    file://{os.path.abspath(output_dir)}/output.xml")
+    
+    # Clean up: Delete the AI-generated Robot file after execution
+    try:
+        if os.path.exists(test_file):
+            os.remove(test_file)
+            print(f"\n🧹 Cleanup: AI-generated Robot file deleted: {test_file}")
+            logging.info(f"Deleted temporary Robot file: {test_file}")
+    except Exception as e:
+        logging.warning(f"Could not delete temporary Robot file {test_file}: {e}")
+    
     if stdout:
-        print("\n===== Raw pytest Output =====")
+        print("\n===== Raw Robot Framework Output =====")
         print(stdout)
     
     if stderr:
