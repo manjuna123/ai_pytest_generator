@@ -23,6 +23,15 @@ def read_openapi_spec(spec_path):
 # 2. Build prompt for LLM
 def build_prompt(openapi_spec, base_url=None):
     base_url_instruction = f"Use this base URL: {base_url}" if base_url else "Define BASE_URL variable"
+    # Read api_library_instructions.md for richer keyword documentation
+    instructions_path = os.path.join(os.path.dirname(__file__), 'api_library_instructions.md')
+    try:
+        with open(instructions_path, 'r') as f:
+            api_keyword_docs = f.read()
+    except Exception as e:
+        api_keyword_docs = ""
+        logging.warning(f"Could not read api_library_instructions.md: {e}")
+
     prompt = f"""
 You are an expert Robot Framework test automation engineer. Generate comprehensive Robot Framework test cases based on the following OpenAPI specification.
 
@@ -44,6 +53,11 @@ IMPORTANT:
 - Only generate Robot Framework .robot file content. Do NOT generate Python or pytest code.
 - The output must start with *** Settings *** and use Robot Framework syntax throughout.
 - Do not include any Python code blocks or explanations for pytest.
+
+---
+Below is the documentation for the available custom keywords and usage examples:
+{api_keyword_docs}
+---
 
 OpenAPI Specification:
 {openapi_spec}
@@ -341,6 +355,12 @@ def run_tests(test_file_path):
 def verify_all_apis(spec_path, base_url=None):
     openapi_spec = read_openapi_spec(spec_path)
     prompt = build_prompt(openapi_spec, base_url)
+    # Log the final prompt to a separate file prompt.log for traceability
+    try:
+        with open("prompt.log", "a") as logf:
+            logf.write("\n" + "="*80 + "\nAnthropic LLM Prompt\n" + "="*80 + "\n" + prompt + "\n" + "="*80 + "\n")
+    except Exception as e:
+        logging.warning(f"Could not write LLM prompt to prompt.log: {e}")
     
     # Ensure api_keywords.robot is available in generated_tests directory
     import shutil

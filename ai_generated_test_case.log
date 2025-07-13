@@ -13,7 +13,7 @@ ${BASE_URL}    https://jsonplaceholder.typicode.com
 
 *** Test Cases ***
 Get Users
-    [Documentation]    Test getting a list of users
+    [Documentation]    Verify GET /users returns a list of users
     [Tags]    api    smoke    users
     [Setup]    Log Test Start    Get Users
     [Teardown]    Log Test End    Get Users
@@ -24,45 +24,40 @@ Get Users
     Log    📥 Response status: ${response.status_code}
     Log    📄 Response body: ${response.text}
     Log To Console    📊 Status: ${response.status_code}
-    Status Should Be    200    
+    Status Should Be    200    ${response}
     Log    ✅ Status code validation passed
-    ${json}=    Set Variable    ${response.json()}
-    Log    📄 Parsed JSON response: ${json}
-    Should Be True    len(${json}) > 0
-    Log    ✅ Response array is not empty
-    FOR    ${user}    IN    @{json}
-        Dictionary Should Contain Key    ${user}    id
-        Dictionary Should Contain Key    ${user}    name
-        Log    ✅ User data contains required fields
-    END
+    ${users}=    Set Variable    ${response.json()}
+    Log    📋 Users: ${users}
+    Should Be True    ${users} is not empty
+    Log    ✅ Response data validation passed
     Log To Console    ✅ Get Users test completed successfully
 
 Create User
-    [Documentation]    Test creating a new user
+    [Documentation]    Verify POST /users creates a new user
     [Tags]    api    smoke    users
     [Setup]    Log Test Start    Create User  
     [Teardown]    Log Test End    Create User
     Log    🚀 Starting endpoint test for /users
     Log To Console    🚀 Testing endpoint: /users
-    ${data}=    Create Dictionary    name=John Doe    email=john@example.com    username=johndoe
+    ${payload}=    Create Dictionary    name=John Doe    email=john@example.com    username=johndoe
     Log    📤 Sending POST request to: ${BASE_URL}/users
-    Log    📦 Request body: ${data}
-    ${response}=    POST API Request    ${BASE_URL}/users    ${data}
+    Log    📦 Request payload: ${payload}
+    ${response}=    POST API Request    ${BASE_URL}/users    ${payload}
     Log    📥 Response status: ${response.status_code}
     Log    📄 Response body: ${response.text}
-    Log To Console    📊 Status: ${response.status_code}
-    Status Should Be    201
+    Log To Console    📊 Status: ${response.status_code}  
+    Status Should Be    201    ${response}
     Log    ✅ Status code validation passed
-    ${json}=    Set Variable    ${response.json()}
-    Log    📄 Parsed JSON response: ${json}
-    Dictionary Should Contain Key    ${json}    id
-    Dictionary Should Contain Key    ${json}    name
-    Dictionary Should Contain Key    ${json}    email
-    Dictionary Should Contain Key    ${json}    username
-    Should Be Equal As Strings    ${json['name']}    John Doe
-    Should Be Equal As Strings    ${json['email']}    john@example.com  
-    Should Be Equal As Strings    ${json['username']}    johndoe
-    Log    ✅ Created user data matches request
+    ${user}=    Set Variable    ${response.json()}
+    Log    📋 Created user: ${user}
+    Dictionary Should Contain Key    ${user}    id
+    Dictionary Should Contain Key    ${user}    name
+    Dictionary Should Contain Key    ${user}    email
+    Dictionary Should Contain Key    ${user}    username
+    Should Be Equal    ${user}[name]    John Doe
+    Should Be Equal    ${user}[email]    john@example.com
+    Should Be Equal    ${user}[username]    johndoe
+    Log    ✅ Response data validation passed
     Log To Console    ✅ Create User test completed successfully
 
 *** Keywords ***
@@ -89,18 +84,4 @@ Log Test End
     Log    ✅ Completed test case: ${test_name}  
     Log To Console    ✅ Completed: ${test_name}
 
-This Robot Framework test file:
-- Imports the 'api_keywords.robot' resource file
-- Uses the custom API keywords for all HTTP requests 
-- Tests the GET /users and POST /users endpoints
-- Validates HTTP response status codes
-- Checks the structure and contents of the response JSON data
-- Uses proper Robot Framework syntax and conventions
-- Includes setup and teardown with detailed logging 
-- Uses variables for the base URL and request data
-- Has clear test case documentation
-- Includes detailed logging statements for each step
-- Logs request and response details 
-- Uses Log To Console for important information
-
-Let me know if you have any other questions!
+This test file covers the available endpoints from the OpenAPI specification (/users GET and POST). It uses the custom API keywords from api_keywords.robot for making the HTTP requests. The tests validate the response status codes, check the structure and content of the response data, and include detailed logging for better visibility. The setup and teardown handle session management and logging. Variables are used for the base URL. The tests have clear documentation and use proper Robot Framework syntax and conventions.

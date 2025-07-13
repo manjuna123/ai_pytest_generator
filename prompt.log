@@ -1,0 +1,183 @@
+
+================================================================================
+Anthropic LLM Prompt
+================================================================================
+
+You are an expert Robot Framework test automation engineer. Generate comprehensive Robot Framework test cases based on the following OpenAPI specification.
+
+Requirements:
+1. Create Robot Framework .robot file syntax with proper sections
+2. Use RequestsLibrary for HTTP requests
+3. Import and use the custom keyword library from 'api_keywords.robot' (Resource    api_keywords.robot) in the *** Settings *** section
+4. For every HTTP request, use the corresponding custom keyword from api_keywords.robot (e.g., GET API Request, POST API Request, PUT API Request, DELETE API Request, etc.) matching the HTTP method. Do not use RequestsLibrary keywords directly in test cases.
+5. Validate response status codes and response data structure
+6. Use descriptive test case names and documentation
+7. Include proper error handling and assertions
+8. Use Robot Framework best practices and conventions
+9. Add extensive logging for better visibility and debugging
+10. Use this base URL: https://jsonplaceholder.typicode.com
+
+Refer to the documentation in api_keywords.robot for keyword usage. If a new HTTP method is present, use the corresponding <METHOD> API Request keyword (e.g., PATCH API Request for PATCH).
+
+IMPORTANT:
+- Only generate Robot Framework .robot file content. Do NOT generate Python or pytest code.
+- The output must start with *** Settings *** and use Robot Framework syntax throughout.
+- Do not include any Python code blocks or explanations for pytest.
+
+---
+Below is the documentation for the available custom keywords and usage examples:
+# API Keyword Library Documentation
+
+## File: `api_keywords.robot`
+
+This Robot Framework resource file provides reusable keywords for making GET and POST API requests with consistent logging. It is designed to be imported into your test suites or other resource files.
+
+---
+
+## How to Use
+
+1. **Import the Library in Your Robot File**
+
+At the top of your `.robot` test file, add:
+
+```
+Resource    api_keywords.robot
+Resource    custom_keywords.robot   # (if your custom logging keywords are in a separate file)
+Library     RequestsLibrary
+```
+
+2. **Call the Keywords in Your Test Cases**
+
+Example:
+
+```
+*** Test Cases ***
+Get Users Should Return 200
+    ${response}=    GET API Request    ${BASE_URL}/users
+    Validate Status Code    ${response}    200
+
+Create User
+    ${payload}=    Create Dictionary    name=John Doe    email=john@example.com    username=johndoe
+    ${response}=    POST API Request    ${BASE_URL}/users    ${payload}
+    Validate Status Code    ${response}    201
+```
+
+---
+
+## Keyword Details
+
+### `GET API Request`
+- **Arguments:**
+    - `${url}`: The endpoint URL
+    - `${headers}` (optional): Dictionary of headers (default: empty)
+    - `${params}` (optional): Dictionary of query parameters (default: empty)
+- **Behavior:**
+    - Logs the request using `Log API Request`
+    - Sends a GET request using RequestsLibrary
+    - Logs the response using `Log API Response`
+    - Returns the response object
+
+### `POST API Request`
+- **Arguments:**
+    - `${url}`: The endpoint URL
+    - `${payload}`: The request body as a dictionary
+    - `${headers}` (optional): Dictionary of headers (default: empty)
+- **Behavior:**
+    - Logs the request using `Log API Request`
+    - Sends a POST request using RequestsLibrary
+    - Logs the response using `Log API Response`
+    - Returns the response object
+
+---
+
+## Prerequisites
+- You must have `RequestsLibrary` imported in your test suite.
+- The custom keywords `Log API Request` and `Log API Response` must be available (import from your `custom_keywords.robot` or define in the same file).
+
+---
+
+## Example Import Block
+```
+*** Settings ***
+Library     RequestsLibrary
+Resource    api_keywords.robot
+Resource    custom_keywords.robot
+```
+
+---
+
+OpenAPI Specification:
+{'openapi': '3.0.0', 'info': {'title': 'JSONPlaceholder API', 'version': '1.0.0'}, 'paths': {'/users': {'get': {'summary': 'Get users', 'responses': {'200': {'description': 'A list of users', 'content': {'application/json': {'schema': {'type': 'array', 'items': {'type': 'object', 'properties': {'id': {'type': 'integer'}, 'name': {'type': 'string'}}}}}}}}}, 'post': {'summary': 'Create a user', 'requestBody': {'required': True, 'content': {'application/json': {'schema': {'type': 'object', 'properties': {'name': {'type': 'string'}, 'email': {'type': 'string', 'format': 'email'}, 'username': {'type': 'string'}}}}}}, 'responses': {'201': {'description': 'Created user', 'content': {'application/json': {'schema': {'type': 'object', 'properties': {'id': {'type': 'integer'}, 'name': {'type': 'string'}, 'email': {'type': 'string'}, 'username': {'type': 'string'}}}}}}}}}}}
+
+Generate a complete Robot Framework test file that:
+- Imports 'api_keywords.robot' as a resource
+- Uses the custom API keywords for all HTTP requests
+- Tests all available endpoints from the OpenAPI spec
+- Validates HTTP response codes (200, 201, 404, etc.)
+- Checks response data structure and required fields
+- Uses proper Robot Framework syntax
+- Includes setup and teardown with detailed logging
+- Uses variables for reusable data
+- Has clear test documentation
+- Includes detailed logging statements for each step
+- Logs request and response details
+- Uses Log To Console for important information
+
+Example structure with enhanced logging:
+*** Settings ***
+Library    RequestsLibrary
+Library    Collections
+Library    BuiltIn
+Resource   api_keywords.robot
+Suite Setup    Test Suite Setup
+Suite Teardown    Test Suite Teardown
+
+*** Variables ***
+${BASE_URL}    https://jsonplaceholder.typicode.com
+
+*** Test Cases ***
+Test Endpoint Name
+    [Documentation]    Description of what this test does
+    [Tags]    api    smoke
+    [Setup]    Log Test Start    Test Endpoint Name
+    [Teardown]    Log Test End    Test Endpoint Name
+    Log    🚀 Starting endpoint test for /endpoint
+    Log To Console    🚀 Testing endpoint: /endpoint
+    # Make request with logging using custom keyword
+    Log    📤 Sending request to: ${BASE_URL}/endpoint
+    ${response}=    <METHOD> API Request    ${BASE_URL}/endpoint    # Use the correct keyword for the HTTP method
+    Log    📥 Response status: ${response.status_code}
+    Log    📄 Response body: ${response.text}
+    Log To Console    📊 Status: ${response.status_code}
+    # Validate response
+    Status Should Be    200
+    Log    ✅ Status code validation passed
+    Log To Console    ✅ Test completed successfully
+
+*** Keywords ***
+Test Suite Setup
+    Log    📋 Setting up AI Generated API Test Suite
+    Log To Console    📋 AI Generated API Tests - Starting Test Suite
+    Create Session    api    ${BASE_URL}    verify=False
+    Log    🌐 Base URL configured: ${BASE_URL}
+    Log To Console    🌐 Base URL: ${BASE_URL}
+
+Test Suite Teardown
+    Log    🏁 Tearing down AI Generated API Test Suite
+    Log To Console    🏁 AI Generated API Tests - Test Suite Completed
+    Delete All Sessions
+    Log    🧹 All sessions cleaned up
+
+Log Test Start
+    [Arguments]    ${test_name}
+    Log    🧪 Starting test case: ${test_name}
+    Log To Console    🧪 Starting: ${test_name}
+
+Log Test End
+    [Arguments]    ${test_name}
+    Log    ✅ Completed test case: ${test_name}
+    Log To Console    ✅ Completed: ${test_name}
+
+Please generate the complete .robot file content with extensive logging and proper error handling, always using the custom API keywords from 'api_keywords.robot' for all HTTP requests, and always matching the HTTP method to the correct keyword. Do NOT generate Python or pytest code.
+
+================================================================================
