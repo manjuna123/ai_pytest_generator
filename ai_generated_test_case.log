@@ -1,0 +1,106 @@
+Here is the complete Robot Framework test file based on the provided OpenAPI specification and requirements:
+
+*** Settings ***
+Library    RequestsLibrary
+Library    Collections
+Library    BuiltIn
+Resource   api_keywords.robot
+Suite Setup    Test Suite Setup
+Suite Teardown    Test Suite Teardown
+
+*** Variables ***
+${BASE_URL}    https://jsonplaceholder.typicode.com
+
+*** Test Cases ***
+Get Users
+    [Documentation]    Test getting a list of users
+    [Tags]    api    smoke    users
+    [Setup]    Log Test Start    Get Users
+    [Teardown]    Log Test End    Get Users
+    Log    🚀 Starting endpoint test for /users
+    Log To Console    🚀 Testing endpoint: /users
+    Log    📤 Sending GET request to: ${BASE_URL}/users
+    ${response}=    GET API Request    ${BASE_URL}/users
+    Log    📥 Response status: ${response.status_code}
+    Log    📄 Response body: ${response.text}
+    Log To Console    📊 Status: ${response.status_code}
+    Status Should Be    200    
+    Log    ✅ Status code validation passed
+    ${json}=    Set Variable    ${response.json()}
+    Log    📄 Parsed JSON response: ${json}
+    Should Be True    len(${json}) > 0
+    Log    ✅ Response array is not empty
+    FOR    ${user}    IN    @{json}
+        Dictionary Should Contain Key    ${user}    id
+        Dictionary Should Contain Key    ${user}    name
+        Log    ✅ User data contains required fields
+    END
+    Log To Console    ✅ Get Users test completed successfully
+
+Create User
+    [Documentation]    Test creating a new user
+    [Tags]    api    smoke    users
+    [Setup]    Log Test Start    Create User  
+    [Teardown]    Log Test End    Create User
+    Log    🚀 Starting endpoint test for /users
+    Log To Console    🚀 Testing endpoint: /users
+    ${data}=    Create Dictionary    name=John Doe    email=john@example.com    username=johndoe
+    Log    📤 Sending POST request to: ${BASE_URL}/users
+    Log    📦 Request body: ${data}
+    ${response}=    POST API Request    ${BASE_URL}/users    ${data}
+    Log    📥 Response status: ${response.status_code}
+    Log    📄 Response body: ${response.text}
+    Log To Console    📊 Status: ${response.status_code}
+    Status Should Be    201
+    Log    ✅ Status code validation passed
+    ${json}=    Set Variable    ${response.json()}
+    Log    📄 Parsed JSON response: ${json}
+    Dictionary Should Contain Key    ${json}    id
+    Dictionary Should Contain Key    ${json}    name
+    Dictionary Should Contain Key    ${json}    email
+    Dictionary Should Contain Key    ${json}    username
+    Should Be Equal As Strings    ${json['name']}    John Doe
+    Should Be Equal As Strings    ${json['email']}    john@example.com  
+    Should Be Equal As Strings    ${json['username']}    johndoe
+    Log    ✅ Created user data matches request
+    Log To Console    ✅ Create User test completed successfully
+
+*** Keywords ***
+Test Suite Setup
+    Log    📋 Setting up AI Generated API Test Suite
+    Log To Console    📋 AI Generated API Tests - Starting Test Suite
+    Create Session    api    ${BASE_URL}    verify=False
+    Log    🌐 Base URL configured: ${BASE_URL}
+    Log To Console    🌐 Base URL: ${BASE_URL}
+
+Test Suite Teardown  
+    Log    🏁 Tearing down AI Generated API Test Suite
+    Log To Console    🏁 AI Generated API Tests - Test Suite Completed
+    Delete All Sessions
+    Log    🧹 All sessions cleaned up
+
+Log Test Start
+    [Arguments]    ${test_name}
+    Log    🧪 Starting test case: ${test_name}
+    Log To Console    🧪 Starting: ${test_name}
+
+Log Test End
+    [Arguments]    ${test_name}
+    Log    ✅ Completed test case: ${test_name}  
+    Log To Console    ✅ Completed: ${test_name}
+
+This Robot Framework test file:
+- Imports the 'api_keywords.robot' resource file
+- Uses the custom API keywords for all HTTP requests 
+- Tests the GET /users and POST /users endpoints
+- Validates HTTP response status codes
+- Checks the structure and contents of the response JSON data
+- Uses proper Robot Framework syntax and conventions
+- Includes setup and teardown with detailed logging 
+- Uses variables for the base URL and request data
+- Has clear test case documentation
+- Includes detailed logging statements for each step
+- Logs request and response details 
+- Uses Log To Console for important information
+
+Let me know if you have any other questions!

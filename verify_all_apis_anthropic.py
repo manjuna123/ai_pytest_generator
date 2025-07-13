@@ -28,19 +28,29 @@ You are an expert Robot Framework test automation engineer. Generate comprehensi
 
 Requirements:
 1. Create Robot Framework .robot file syntax with proper sections
-2. Use RequestsLibrary for HTTP requests 
-3. Include *** Settings ***, *** Variables ***, *** Test Cases ***, and *** Keywords *** sections
-4. Validate response status codes and response data structure
-5. Use descriptive test case names and documentation
-6. Include proper error handling and assertions
-7. Use Robot Framework best practices and conventions
-8. Add extensive logging for better visibility and debugging
-9. {base_url_instruction}
+2. Use RequestsLibrary for HTTP requests
+3. Import and use the custom keyword library from 'api_keywords.robot' (Resource    api_keywords.robot) in the *** Settings *** section
+4. For every HTTP request, use the corresponding custom keyword from api_keywords.robot (e.g., GET API Request, POST API Request, PUT API Request, DELETE API Request, etc.) matching the HTTP method. Do not use RequestsLibrary keywords directly in test cases.
+5. Validate response status codes and response data structure
+6. Use descriptive test case names and documentation
+7. Include proper error handling and assertions
+8. Use Robot Framework best practices and conventions
+9. Add extensive logging for better visibility and debugging
+10. {base_url_instruction}
+
+Refer to the documentation in api_keywords.robot for keyword usage. If a new HTTP method is present, use the corresponding <METHOD> API Request keyword (e.g., PATCH API Request for PATCH).
+
+IMPORTANT:
+- Only generate Robot Framework .robot file content. Do NOT generate Python or pytest code.
+- The output must start with *** Settings *** and use Robot Framework syntax throughout.
+- Do not include any Python code blocks or explanations for pytest.
 
 OpenAPI Specification:
 {openapi_spec}
 
 Generate a complete Robot Framework test file that:
+- Imports 'api_keywords.robot' as a resource
+- Uses the custom API keywords for all HTTP requests
 - Tests all available endpoints from the OpenAPI spec
 - Validates HTTP response codes (200, 201, 404, etc.)
 - Checks response data structure and required fields
@@ -57,6 +67,7 @@ Example structure with enhanced logging:
 Library    RequestsLibrary
 Library    Collections
 Library    BuiltIn
+Resource   api_keywords.robot
 Suite Setup    Test Suite Setup
 Suite Teardown    Test Suite Teardown
 
@@ -69,17 +80,14 @@ Test Endpoint Name
     [Tags]    api    smoke
     [Setup]    Log Test Start    Test Endpoint Name
     [Teardown]    Log Test End    Test Endpoint Name
-    
     Log    🚀 Starting endpoint test for /endpoint
     Log To Console    🚀 Testing endpoint: /endpoint
-    
-    # Make request with logging
+    # Make request with logging using custom keyword
     Log    📤 Sending request to: ${{BASE_URL}}/endpoint
-    ${{response}}=    GET    ${{BASE_URL}}/endpoint
+    ${{response}}=    <METHOD> API Request    ${{BASE_URL}}/endpoint    # Use the correct keyword for the HTTP method
     Log    📥 Response status: ${{response.status_code}}
     Log    📄 Response body: ${{response.text}}
     Log To Console    📊 Status: ${{response.status_code}}
-    
     # Validate response
     Status Should Be    200
     Log    ✅ Status code validation passed
@@ -109,7 +117,7 @@ Log Test End
     Log    ✅ Completed test case: ${{test_name}}
     Log To Console    ✅ Completed: ${{test_name}}
 
-Please generate the complete .robot file content with extensive logging and proper error handling.
+Please generate the complete .robot file content with extensive logging and proper error handling, always using the custom API keywords from 'api_keywords.robot' for all HTTP requests, and always matching the HTTP method to the correct keyword. Do NOT generate Python or pytest code.
 """
     logging.info("Prompt for LLM built.")
     return prompt
@@ -333,10 +341,25 @@ def run_tests(test_file_path):
 def verify_all_apis(spec_path, base_url=None):
     openapi_spec = read_openapi_spec(spec_path)
     prompt = build_prompt(openapi_spec, base_url)
+    
+    # Ensure api_keywords.robot is available in generated_tests directory
+    import shutil
+    keywords_src = os.path.join(os.path.dirname(__file__), 'api_keywords.robot')
+    keywords_dst = os.path.join('generated_tests', 'api_keywords.robot')
+    try:
+        shutil.copy2(keywords_src, keywords_dst)
+        logging.info(f"Copied api_keywords.robot to {keywords_dst}")
+    except Exception as e:
+        logging.warning(f"Could not copy api_keywords.robot: {e}")
+
     test_code = generate_tests_with_llm(prompt)
     logging.info("===== LLM Response (Robot Framework test code) =====")
     print("===== LLM Response (Robot Framework test code) =====")
     print(test_code)
+    # Log the AI-generated test code to a file for debugging
+    with open("ai_generated_test_case.log", "w") as logf:
+        logf.write(test_code)
+    logging.info("AI-generated Robot Framework test case written to ai_generated_test_case.log")
     test_code = extract_python_code(test_code)
     test_file = save_test_code(test_code)
     stdout, stderr, exit_code, scenarios, status, test_results, output_dir = run_tests(test_file)
